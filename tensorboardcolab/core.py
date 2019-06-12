@@ -132,6 +132,10 @@ class TensorBoardColabCallback(TensorBoard):
 
         # Log the validation metrics to a separate subdirectory
         self.val_log_dir = os.path.join(log_dir, 'validation')
+       
+        self.batch_gen = batch_gen # The generator.
+        self.nb_steps = nb_steps   # Number of times to call next() on the generator.
+        #self.batch_size = b_size
 
     def set_model(self, model):
         # Setup writer for validation metrics
@@ -167,7 +171,23 @@ class TensorBoardColabCallback(TensorBoard):
 
         # Pass the remaining logs to `TensorBoard.on_epoch_end`
         logs = {k: v for k, v in logs.items() if not k.startswith('val_')}
-        super(TensorBoardColabCallback, self).on_epoch_end(epoch, logs)
+        
+        ##### SOLVING HISTOGRAMS FOR VALIDATION GENERATORS
+        # Fill in the `validation_data` property. Obviously this is specific to how your generator works.
+        # Below is an example that yields images and classification tags.
+        # After it's filled in, the regular on_epoch_end method has access to the validation_data.
+        imgs, tags = None, None
+        for s in range(self.nb_steps):
+            ib, tb = next(self.batch_gen)
+            if imgs is None and tags is None:
+                imgs = np.zeros(((self.nb_steps * self.batch_size,) + ib.shape[1:]), dtype=np.float32)
+                tags = np.zeros(((self.nb_steps * self.batch_size,) + tb.shape[1:]), dtype=np.uint8)
+            imgs[s * ib.shape[0]:(s + 1) * ib.shape[0]] = ib
+            tags[s * tb.shape[0]:(s + 1) * tb.shape[0]] = tb
+        
+        self.validation_data = [imgs, tags, np.ones(imgs.shape[0])]
+              
+        return super(TensorBoardColabCallback, self).on_epoch_end(epoch, logs)
 
     def on_train_end(self, logs=None):
         super(TensorBoardColabCallback, self).on_train_end(logs)
