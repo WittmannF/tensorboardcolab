@@ -120,7 +120,7 @@ class TensorBoardColab:
 
 
 class TensorBoardColabCallback(TensorBoard):
-    def __init__(self, tbc=None, write_graph=True, **kwargs):
+    def __init__(self, tbc=None, write_graph=True, batch_gen=None, nb_steps=None, **kwargs):
         # Make the original `TensorBoard` log to a subdirectory 'training'
 
         if tbc is None:
@@ -133,6 +133,9 @@ class TensorBoardColabCallback(TensorBoard):
 
         # Log the validation metrics to a separate subdirectory
         self.val_log_dir = os.path.join(log_dir, 'validation')
+        
+        self.batch_gen = batch_gen # The generator.
+        self.nb_steps = nb_steps   # Number of times to call next() on the generator.
 
     def set_model(self, model):
         # Setup writer for validation metrics
